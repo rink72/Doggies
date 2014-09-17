@@ -92,7 +92,7 @@ BatchTrainOrder <-function()
 	queries = dim(1)
 	queries[1] = "[D_1_M],[D_2_M],[D_3_M],[D_1_6M],[D_2_6M],[D_3_6M],[D_1D_A],[D_2D_A],[D_3D_A],[D_P_M],[D_PB_A],[D_PWC_A],[D_1MBREAK], [D_1_M1],[D_2_M1],[D_3_M1],[D_1D_A1],[D_2D_A1],[D_3D_A1],[D_P_A1],[D_P_M1],[D_PB_A1],[D_PWC_A1],[D_1_M2],[D_2_M2],[D_3_M2],[D_1D_A2],[D_2D_A2],[D_3D_A2],[D_P_A2],[D_P_M2],[D_PB_A2],[D_PWC_A2],[D_1_M3],[D_2_M3],[D_3_M3],[D_1D_A3],[D_2D_A3],[D_3D_A3],[D_P_A3],[D_P_M3],[D_PB_A3],[D_PWC_A3]"
 	queries[2] = "[D_1_M],[D_2_M],[D_3_M],[D_1_6M],[D_2_6M],[D_3_6M],[D_1D_A],[D_2D_A],[D_3D_A],[D_P_M],[D_PB_A],[D_PWC_A],[D_1MBREAK], [D_1_M1],[D_2_M1],[D_3_M1],[D_1D_A1],[D_2D_A1],[D_3D_A1],[D_P_A1],[D_P_M1],[D_PT_A1],[D_PB_A1],[D_PWC_A1],[D_PTC_A1],[D_1_M2],[D_2_M2],[D_3_M2],[D_1D_A2],[D_2D_A2],[D_3D_A2],[D_P_A2],[D_P_M2],[D_PT_A2],[D_PB_A2],[D_PWC_A2],[D_PTC_A2],[D_1_M3],[D_2_M3],[D_3_M3],[D_1D_A3],[D_2D_A3],[D_3D_A3],[D_P_A3],[D_P_M3],[D_PT_A3],[D_PB_A3],[D_PWC_A3],[D_PTC_A3]"
-	#queries[3] = "[D_1_M],[D_2_M],[D_3_M],[D_1_6M],[D_2_6M],[D_3_6M],[D_1D_A],[D_2D_A],[D_3D_A],[D_P_M],[D_PB_A],[D_PWC_A],[D_PTC_A],[D_1_M1],[D_2_M1],[D_3_M1],[D_1D_A1],[D_2D_A1],[D_3D_A1],[D_P_A1],[D_P_M1],[D_PT_A1],[D_PB_A1],[D_PWC_A1],[D_PTC_A1],[D_1_M2],[D_2_M2],[D_3_M2],[D_1D_A2],[D_2D_A2],[D_3D_A2],[D_P_A2],[D_P_M2],[D_PT_A2],[D_PB_A2],[D_PWC_A2],[D_PTC_A2],[D_1_M3],[D_2_M3],[D_3_M3],[D_1D_A3],[D_2D_A3],[D_3D_A3],[D_P_A3],[D_P_M3],[D_PT_A3],[D_PB_A3],[D_PWC_A3],[D_PTC_A3]"
+	queries[3] = "[D_1_M],[D_2_M],[D_3_M],[D_1_6M],[D_2_6M],[D_3_6M],[D_1D_A],[D_2D_A],[D_3D_A],[D_P_M],[D_PB_A],[D_PWC_A],[D_1MBREAK],[D_1_M1],[D_2_M1],[D_3_M1],[D_1_M2],[D_2_M2],[D_3_M2],[D_1_M3],[D_2_M3],[D_3_M3]"
 	#queries[4] = "[D_1_M],[D_2_M],[D_3_M],[D_1_6M],[D_2_6M],[D_3_6M],[D_1D_A],[D_2D_A],[D_3D_A],[D_P_M],[D_PB_A],[D_PTC_A],[D_1_M1],[D_2_M1],[D_3_M1],[D_1D_A1],[D_2D_A1],[D_3D_A1],[D_P_A1],[D_P_M1],[D_PT_A1],[D_PB_A1],[D_PWC_A1],[D_PTC_A1],[D_1_M2],[D_2_M2],[D_3_M2],[D_1D_A2],[D_2D_A2],[D_3D_A2],[D_P_A2],[D_P_M2],[D_PT_A2],[D_PB_A2],[D_PWC_A2],[D_PTC_A2],[D_1_M3],[D_2_M3],[D_3_M3],[D_1D_A3],[D_2D_A3],[D_3D_A3],[D_P_A3],[D_P_M3],[D_PT_A3],[D_PB_A3],[D_PWC_A3],[D_PTC_A3]"
 	#queries[5] = "[D_1_M],[D_2_M],[D_3_M],[D_1_6M],[D_2_6M],[D_3_6M],[D_1D_A],[D_2D_A],[D_3D_A],[D_P_A],[D_P_M],[D_PT_A],[D_PB_A],[D_PWC_A],[D_PTC_A],[D_1_M1],[D_2_M1],[D_3_M1],[D_1D_A1],[D_2D_A1],[D_3D_A1],[D_P_A1],[D_P_M1],[D_PT_A1],[D_PB_A1],[D_PWC_A1],[D_PTC_A1],[D_1_M2],[D_2_M2],[D_3_M2],[D_1D_A2],[D_2D_A2],[D_3D_A2],[D_P_A2],[D_P_M2],[D_PT_A2],[D_PB_A2],[D_PWC_A2],[D_PTC_A2],[D_1_M3],[D_2_M3],[D_3_M3],[D_1D_A3],[D_2D_A3],[D_3D_A3],[D_P_A3],[D_P_M3],[D_PT_A3],[D_PB_A3],[D_PWC_A3],[D_PTC_A3]"
 		
@@ -103,7 +103,7 @@ BatchTrainOrder <-function()
 	neurons = dim(1)
 	neurons[1] = 2
 	neurons[2] = 4
-	#neurons$three = 8
+	neurons[3] = 8
 	#neurons$four = 10
 	#neurons$five = 15
 	
