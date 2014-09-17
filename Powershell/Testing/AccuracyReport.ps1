@@ -77,8 +77,7 @@ function calculatePayout($picks)
 
 
 
-$networkQuery = "SELECT CONFIGVALUE FROM CONFIG WHERE CONFIGITEM = 'PREDICTIONMODEL'"
-$networkDetails = (ReadSQL($networkQuery)).CONFIGVALUE
+$networkDetails = "Q_1_E_0.05_5000_204_N_2_rprop+_tanh_NO_TANH"
 
 $trackIDsQuery = "SELECT DISTINCT b.TRACKID FROM PREDICTEDRESULTS a INNER JOIN RACES b on a.RACEID = b.RACEID WHERE a.nnid = '$networkDetails'"
 $trackIDs = (ReadSQL($trackIDsQuery)).TRACKID
@@ -180,3 +179,5 @@ foreach($track in $trackIDs)
     $overall.NumberBets = $nBets
 
     $trackData.Add($overall)
+
+    $trackData | Sort-Object PercentCorrect | ft
