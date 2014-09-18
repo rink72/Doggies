@@ -77,7 +77,7 @@ function calculatePayout($picks)
 
 
 
-$networkDetails = "Q_1_E_0.05_5000_204_N_2_rprop+_tanh_NO_TANH"
+$networkDetails = "Q_1_E_0.05_5000_209_N_2_rprop+_tanh_MAX_MIN_TANH"
 
 $trackIDsQuery = "SELECT DISTINCT b.TRACKID FROM PREDICTEDRESULTS a INNER JOIN RACES b on a.RACEID = b.RACEID WHERE a.nnid = '$networkDetails'"
 $trackIDs = (ReadSQL($trackIDsQuery)).TRACKID
