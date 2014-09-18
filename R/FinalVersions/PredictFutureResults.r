@@ -13,7 +13,7 @@ PredictFutureResults <- function()
 	nnID = data.frame(lapply(nnID, as.character), stringsAsFactors=FALSE)
 	nnID = nnID[,1]
 	
-	networkQuery = paste("SELECT id, nnfilename, query from NETWORKDETAILS WHERE ID = '", nnID, "'", sep = "")  
+	networkQuery = paste("SELECT id, nnfilename, query from NETWORKDETAILS WHERE ID = '", nnID, "'", sep = "")
 	network = sqlQuery(racingConn, networkQuery)
 	
 	query = data.frame(network[, 3])

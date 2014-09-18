@@ -39,7 +39,7 @@ function GetDogID($DogName)
 
 function UpdateRaceDataXML
 {
-    $futureRacesQuery = "SELECT a.RACEID, b.NUMBER AS MEETNUMBER, a.RACENUMBER FROM RACES a INNER JOIN MEETS b ON a.MEETID = b.MEETID WHERE a.STARTTIME > getdate()"
+    $futureRacesQuery = "SELECT a.RACEID, b.NUMBER AS MEETNUMBER, a.RACENUMBER, a.TRACKID FROM RACES a INNER JOIN MEETS b ON a.MEETID = b.MEETID WHERE a.STARTTIME > getdate()"
     $futureRaces = ReadSQL($futureRacesQuery)
     $date = Get-Date -Format yyyy-MM-dd
     
@@ -48,7 +48,12 @@ function UpdateRaceDataXML
     {
         $meetNum = $race.MEETNUMBER
         $raceNum = $race.RACENUMBER
-        
+        $trackID = $race.TRACKID
+
+        $predictTrackQuery = "SELECT PREDICT FROM TRACKS WHERE TRACKID = $trackID and PREDICT = 1"
+        $doPredict = (ReadSQL($predictTrackQuery)).PREDICT
+        if($doPredict -eq $NULL) { continue }
+
         $url = "$SCHEDULEURL\$date\$meetNum\$raceNum"
 
         $ProgressPreference = "SilentlyContinue"
@@ -213,12 +218,69 @@ function CreatePredictionData()
     $count++
     }
 
+    DataSecondPass
+
 }
+
+function DataSecondPass
+{
+    $trainLinesQuery = "SELECT RACEID, DOGID FROM FUTUREDATA"
+    $trainLinesData = ReadSQL($trainLinesQuery)
+
+    $totalLines = $trainLinesData.Count
+    $lineCount = 0
+    foreach($line in $trainLinesData)
+    {
+        $dogID = $line.DOGID
+        $raceID = $line.RACEID
+        $otherDogsQuery = "SELECT TOP 3 [D_1_M],[D_2_M],[D_3_M],[D_1D_A],[D_2D_A],[D_3D_A],[D_P_A],[D_P_M],[D_PT_A],[D_PB_A],[D_PWC_A],[D_PTC_A] FROM FUTUREDATA WHERE RACEID = $raceID and DOGID <> $dogID ORDER BY [D_P_M] DESC"
+        $otherDogs = ReadSQL($otherDogsQuery)
+
+        
+        
+        if($otherDogs.Count -lt 3) { $updateQuery = "DELETE FUTUREDATA WHERE RACEID = $raceID" }
+        else
+        {
+            $updateQuery = "UPDATE FUTUREDATA SET "
+            $vars = ($otherDogs[0] | Get-Member) | where { $_.MemberType -eq "Property" }
+            $count = 1
+            foreach($dog in $otherDogs)
+            {
+            
+                foreach($var in $vars)
+                {
+                    $varName = $var.Name
+                    $data = $dog.$varName
+                    $updateQuery = $updateQuery + "$varName$count = $data,"
+                }
+
+                $count++
+            }
+
+            $updateQuery = $updateQuery.trim(",")
+            $updateQuery = $updateQuery + " WHERE RACEID = $raceID AND DOGID = $dogID"
+        
+        }
+
+        RunSQL($updateQuery)
+
+        $lineCount++
+        if($lineCount % 10 -eq 0)
+        {
+            $percent = $percent = [math]::round((($lineCount/$totalLines) * 100), 0)
+            Write-Progress -Activity:"Processing Second Pass... ($percent%)" -PercentComplete:$percent
+        }
+
+       
+    }
+
+}
+
 
 function GeneratePredictions()
 {
     $exe = "C:\Program Files\R\R-3.1.1\bin\Rscript.exe"
-    $script = """C:\Projects\Racing\R\Testing\PredictFutureResults.r"""
+    $script = """C:\Projects\Racing\Code\Doggies\R\Testing\PredictFutureResults.r"""
     Start-Process $exe -ArgumentList $script
 }
 

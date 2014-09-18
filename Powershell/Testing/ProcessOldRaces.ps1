@@ -47,7 +47,7 @@ function GetDogID($DogName)
 
 function DownloadOldMeetsXML
 {
-    $TIMEPERIOD = 800
+    $TIMEPERIOD = 4
     $STARTDATE = (Get-Date).AddDays(-1)
     $FINISHDATE = $STARTDATE.AddDays(-$TIMEPERIOD)
 
@@ -136,7 +136,6 @@ function ProcessOldRaceXML($raceXML, $date, $meetNumber, $trackID, $meetID)
 
     if($pools -eq $NULL) { return } 
 
-    $ErrorActionPreference = "Inquire"
     $winpay = $pools[0].amount
     $placepay = [float]$pools[1].amount
     if($placepay -eq 0) { $placepay = 1 }
@@ -238,6 +237,10 @@ function DownloadNewMeetsXML
         $races = $meet.races.race
 
         $trackID = GetTrackID -TrackName $name -CountryCode $country
+        $predictTrackQuery = "SELECT PREDICT FROM TRACKS WHERE TRACKID = $trackID and PREDICT = 1"
+        $doPredict = (ReadSQL($predictTrackQuery)).PREDICT
+        if($doPredict -eq $NULL) { continue }
+
         $meetIDQuery = "SELECT MEETID FROM MEETS WHERE DATE = '$date' AND NAME = '$name'"
         $meetID = (ReadSQL $meetIDQuery).MEETID
 
