@@ -66,24 +66,6 @@ cleanData <- function(x)
 	return(x)
 }
 
-PredictResults <- function(net)
-{
-	racingConn = odbcConnect("racing")
-	queries = "EXEC GetTrainingData @NUMnumbers = 300000"
-	tableData = sqlQuery(racingConn, queries)
-	tableData = tableData[sample(nrow(tableData)),]
-	inputData = tableData[,3:(ncol(tableData)-1)]
-	
-	results = compute(net, inputData)
-	results = results$net.result
-	PredictedResults = results
-	
-	output = cbind(tableData[,1:2], PredictedResults)
-	sqlSave(racingConn, output, tablename = "PREDICTEDRESULTS")
-	close(racingConn)
-
-}
-
 BatchTrainOrder <-function()
 {
 	fileRoot = "C:/Projects/Racing/Networks/Testing/"
@@ -129,6 +111,11 @@ BatchTrainOrder <-function()
 	normalise[3] = "MEAN_STDDEV"
 	
 	racingConn = odbcConnect("racingTest")
+	trackMonthQuery = "select TRACKID, month(starttime) as MONTH from races group by trackid, month(starttime) having count(*) > 100 ORDER BY trackid, month(starttime)"
+	trackMonth = sqlQuery(racingConn, trackMonthQuery)
+	tracks = unique(trackMonth[,1])
+	trackMonth = as.data.frame(trackMonth)
+	
 	iterationQuery = "SELECT CONFIGVALUE FROM CONFIG WHERE CONFIGITEM = 'TRAININGITERATION'"
 	iteration = sqlQuery(racingConn, iterationQuery)
 	iteration = iteration[,1] + 1
@@ -155,54 +142,64 @@ BatchTrainOrder <-function()
 							{
 								for(sc in 1:length(scales))
 								{
-							
-									print(paste("Query", query, iter, errors[error], neurons[n], algs[alg], actFunc[act], scales[sc], normalise[norms], sep="_"))
-									
-									finalQuery = paste("SELECT TOP 5000 RACEID, DOGID,", queries[query], ", RESULT FROM TRAININGDATA WHERE DATATYPE = 'TRAINING' ORDER BY newid()", sep = " ")
-									queryData = sqlQuery(racingConn, finalQuery)
-									queryData = queryData[,3:ncol(queryData)]
-									queryData = queryData[sample(nrow(queryData)),]
-									queryData$RESULT[queryData$RESULT > 4] = 10
-									
-									if(normalise[norms] == "MEAN_STDDEV") { queryData = normalize(queryData) }
-									else if (normalise[norms] == "MAX_MIN") { queryData = normalize2(queryData) }
-									if(scales[sc] == "TANH") { queryData = scaleTANH(queryData) }
-									
-									queryData = data.matrix(queryData)
-									
-									vars = colnames(queryData[,1:(ncol(queryData)-1)])
-									formula = as.formula(paste("RESULT ~ ", paste(vars, collapse= "+")))
-									
-									net = as.null()
-									
-									if(algs[alg] == "backprop")
-									{ net = neuralnet(formula, queryData, hidden = c(neurons[n]), threshold = errors[error], stepmax = 5000000, lifesign = "full", lifesign.step = 10000, act.fct = actFunc[act]) }
-									else { net = neuralnet(formula, queryData, hidden = c(neurons[n]), threshold = errors[error], stepmax = 5000000, lifesign = "full", lifesign.step = 10000, act.fct = actFunc[act], algorithm = algs[alg]) }
-									
-									if(!is.null(net$net))
+									for(t in tracks)
 									{
-										netDetails = matrix(nrow=1,ncol=11)
-										colnames(netDetails) = c("query", "error", "traininglines", "neurons", "nnfilename", "id", "PredictionType", "ActivationFunction", "NNAlgorithm", "Normalised", "Scaled")
-										netDetails[1,1] = queries[query]
-										netDetails[1,2] = errors[error]
-										netDetails[1,3] = 5000
-										netDetails[1,4] = neurons[n]
-										fileName = paste(fileRoot, "Q", query, "E", errors[error], 5000, iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], ".r", sep="_")
-										netDetails[1,5] = fileName
-										NNID = paste("Q", query, "E", errors[error], 5000, iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], sep="_")
-										netDetails[1,6] = NNID
-										netDetails[1,7] = "ORDER"
-										netDetails[1,8] = actFunc[act]
-										netDetails[1,9] = algs[alg]
-										netDetails[1,10] = normalise[norms]
-										netDetails[1,11] = scales[sc]
-										
-										netDetails = as.data.frame(netDetails)
+										months = trackMonth[trackMonth$TRACKID == t,]
+										months = months[,2]
+										for(m in months)
+										{
+											print(paste("Query", query, iter, errors[error], neurons[n], algs[alg], actFunc[act], scales[sc], normalise[norms], t, m, sep="_"))
+											
+											finalQuery = paste("SELECT RACEID, DOGID,", queries[query], ", RESULT FROM TRAININGDATA WHERE DATATYPE = 'TRAINING' AND RACEID IN (SELECT RACEID FROM RACES WHERE TRACKID =", t, "AND MONTH(STARTTIME) =", m,") ORDER BY newid()", sep = " ")
+											print(finalQuery)
+											queryData = sqlQuery(racingConn, finalQuery)
+											queryData = queryData[,3:ncol(queryData)]
+											queryData = queryData[sample(nrow(queryData)),]
+											queryData$RESULT[queryData$RESULT > 4] = 10
+											
+											if(normalise[norms] == "MEAN_STDDEV") { queryData = normalize(queryData) }
+											else if (normalise[norms] == "MAX_MIN") { queryData = normalize2(queryData) }
+											if(scales[sc] == "TANH") { queryData = scaleTANH(queryData) }
+											
+											queryData = data.matrix(queryData)
+											
+											vars = colnames(queryData[,1:(ncol(queryData)-1)])
+											formula = as.formula(paste("RESULT ~ ", paste(vars, collapse= "+")))
+											
+											net = as.null()
+											
+											if(algs[alg] == "backprop")
+											{ net = neuralnet(formula, queryData, hidden = c(neurons[n]), threshold = errors[error], stepmax = 5000000, lifesign = "full", lifesign.step = 10000, act.fct = actFunc[act]) }
+											else { net = neuralnet(formula, queryData, hidden = c(neurons[n]), threshold = errors[error], stepmax = 5000000, lifesign = "full", lifesign.step = 10000, act.fct = actFunc[act], algorithm = algs[alg]) }
+											
+											if(!is.null(net$net))
+											{
+												netDetails = matrix(nrow=1,ncol=13)
+												colnames(netDetails) = c("query", "error", "traininglines", "neurons", "nnfilename", "id", "PredictionType", "ActivationFunction", "NNAlgorithm", "Normalised", "Scaled", "Track", "Month")
+												netDetails[1,1] = queries[query]
+												netDetails[1,2] = errors[error]
+												netDetails[1,3] = nrow(queryData)
+												netDetails[1,4] = neurons[n]
+												fileName = paste(fileRoot, "Q", query, "E", errors[error], 5000, iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], t, m, ".r", sep="_")
+												netDetails[1,5] = fileName
+												NNID = paste("Q", query, "E", errors[error], 5000, iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], t, m, sep="_")
+												netDetails[1,6] = NNID
+												netDetails[1,7] = "ORDER"
+												netDetails[1,8] = actFunc[act]
+												netDetails[1,9] = algs[alg]
+												netDetails[1,10] = normalise[norms]
+												netDetails[1,11] = scales[sc]
+												netDetails[1,12] = t
+												netDetails[1,13] = m
+												
+												netDetails = as.data.frame(netDetails)
 
-										save(net, file = fileName)
-										sqlSave(racingConn, netDetails, tablename = "NETWORKDETAILS", append=TRUE)
-										
-									
+												save(net, file = fileName)
+												sqlSave(racingConn, netDetails, tablename = "NETWORKDETAILS", append=TRUE)
+												
+											
+											}
+										}
 									}
 								}
 							}
@@ -233,7 +230,7 @@ BatchPredict <- function()
 {
 
 	racingConn = odbcConnect("racingTest")
-	networkQuery = "SELECT id, nnfilename, query, Normalised, Scaled from NETWORKDETAILS WHERE ID NOT IN (SELECT DISTINCT NNID FROM PREDICTEDRESULTS) and ID not in (SELECT DISTINCT NNID FROM PREDICTEDRESULTS)"
+	networkQuery = "SELECT id, nnfilename, query, Normalised, Scaled, Track, Month from NETWORKDETAILS WHERE ID NOT IN (SELECT DISTINCT NNID FROM NETWORKRESULTS)"
 	networks = sqlQuery(racingConn, networkQuery)
 	print(networks)
 	
@@ -249,9 +246,11 @@ BatchPredict <- function()
 		query = data.frame(lapply(query, as.character), stringsAsFactors=FALSE)
 		load(nnfilename)
 		colnames(nnid) = c("nnid")
+		trackID = networks[network, 6]
+		month = networks[network, 7]
 
 		print(nnid)
-		query = paste("SELECT RACEID, DOGID,", query, "FROM TRAININGDATA WHERE DATATYPE = 'TESTING' ORDER BY newID()", sep = " ")
+		query = paste("SELECT RACEID, DOGID,", query, "FROM TRAININGDATA WHERE DATATYPE = 'TESTING'", "AND RACEID IN (SELECT RACEID FROM RACES WHERE TRACKID =", trackID,"AND MONTH(STARTTIME) =", month, ") ORDER BY newID()", sep = " ")
 		dataSet = sqlQuery(racingConn, query)
 		dataSet = dataSet[sample(nrow(dataSet)),]
 		inputData = dataSet[,3:ncol(dataSet)]

@@ -1,5 +1,5 @@
 ﻿        $con = New-Object System.Data.SqlClient.SqlConnection
-        $con.ConnectionString = "Server=localhost\sqlexpress;database=RacingRestore;Integrated Security=true"
+        $con.ConnectionString = "Server=localhost;database=RacingRestore;Integrated Security=true"
         $con.Open()
 
 function RunSQL($query)
@@ -26,7 +26,7 @@ function ReadSQL($query)
 
 function TrainingSecondPass
 {
-    $trainLinesQuery = "SELECT RACEID, DOGID FROM TRAININGDATA"
+    $trainLinesQuery = "SELECT RACEID, DOGID FROM TRAININGDATA WHERE DATATYPE is not NULL"
     $trainLinesData = ReadSQL($trainLinesQuery)
 
     $totalLines = $trainLinesData.Count
@@ -40,7 +40,7 @@ function TrainingSecondPass
 
         
         
-        if($otherDogs.Count -lt 3) { $updateQuery = "DELETE TRAININGDATA WHERE RACEID = $raceID" }
+        if($otherDogs.Count -lt 3) { $updateQuery = "UPDATE TRAININGDATA SET DATATYPE = NULL WHERE RACEID = $raceID" }
         else
         {
             $updateQuery = "UPDATE TRAININGDATA SET "
@@ -79,6 +79,25 @@ function TrainingSecondPass
 }
 
 
+function ClassifyTestingData
+{
+    $tracksQuery = "SELECT DISTINCT TRACKID FROM TRACKS"
+    $tracks = (ReadSQL($tracksQuery)).TRACKID
+    $months = 12
+
+    foreach($t in $tracks)
+    {
+        for($m = 1; $m -le $months; $m++)
+        {
+            $testDataQuery = "UPDATE TRAININGDATA SET DATATYPE = 'TESTING' WHERE RACEID IN (SELECT TOP 20 PERCENT RACEID FROM RACES WHERE RACEID in (SELECT DISTINCT RACEID FROM TRAININGDATA WHERE DATATYPE is not NULL) AND TRACKID = $t and MONTH(STARTTIME) = $m ORDER BY newid())"
+            RunSQL($testDataQuery)
+        }
+
+    }
+
+}
+
+
 $RaceQuery = "SELECT [DOGID], [RACEID] FROM RESULTS"
 $RaceData = ReadSQL($RaceQuery)
 
@@ -91,7 +110,7 @@ RunSQL($raceDataQuery)
 $count = 0
 
 foreach($entry in $RaceData)
-{
+{ 
     $DogID = $entry.DOGID
     $RaceID = $entry.RACEID
     $entryQuery = "EXEC GenerateTrainingLine $DogID, $RaceID"
@@ -107,12 +126,9 @@ foreach($entry in $RaceData)
 }
 
 $nullDataQuery = "UPDATE TRAININGDATA SET DATATYPE = NULL WHERE RACEID IN (SELECT RACEID FROM RACES WHERE convert(date, STARTTIME) IN (SELECT DISTINCT TOP 180 convert(date, STARTTIME) FROM RACES))"
-$testingDataQuery =  "UPDATE TRAININGDATA SET DATATYPE = 'TESTING' WHERE RACEID IN (SELECT TOP 10000 RACEID FROM RACES WHERE convert(date, starttime) NOT IN (SELECT DISTINCT TOP 45 convert(date, STARTTIME) FROM RACES) ORDER BY newID())"
-$removeUselessDataQuery = "DELETE FROM TRAININGDATA WHERE  D_1_M = 0 AND  D_2_M = 0 AND  D_3_M = 0"
 
-#RunSQL($removeUselessDataQuery)
 RunSQL($nullDataQuery)
-RunSQL($testingDataQuery)
 
+ClassifyTestingData
 
 TrainingSecondPass
