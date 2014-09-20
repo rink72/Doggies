@@ -228,15 +228,20 @@ BatchTrainOrder <-function()
 
 BatchPredict <- function()
 {
-
+	
 	racingConn = odbcConnect("racingTest")
 	networkQuery = "SELECT id, nnfilename, query, Normalised, Scaled, Track, Month from NETWORKDETAILS WHERE ID NOT IN (SELECT DISTINCT NNID FROM NETWORKRESULTS)"
 	networks = sqlQuery(racingConn, networkQuery)
 	print(networks)
 	
+	count = 0
 	
+	pb = winProgressBar(title = "Batch Predictions", min = 0, max = nrow(networks), width = 300)
 	for(network in 1:nrow(networks))
 	{
+		count = count + 1
+		percent = round((count/nrow(networks))*100,0)
+		setWinProgressBar(pb, count, title=paste( percent, "% done"))
 		nnid = data.frame(networks[network, 1])
 		nnfilename = data.frame(networks[network, 2])
 		nnid = data.frame(lapply(nnid, as.character), stringsAsFactors=FALSE)
@@ -265,8 +270,10 @@ BatchPredict <- function()
 		
 		output = cbind(nnid, dataSet[,1:2], PredictedResults)
 		sqlSave(racingConn, output, tablename = "PREDICTEDRESULTS", append = TRUE)
+		#print(paste("Percent Complete: ", ((count/nrow(networks)) *100), sep = ""))
 	}
 	
+	close(pb)
 	close(racingConn)
 
 }

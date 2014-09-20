@@ -1,5 +1,5 @@
 ﻿        $con = New-Object System.Data.SqlClient.SqlConnection
-        $con.ConnectionString = "Server=localhost\sqlexpress;database=RacingRestore;Integrated Security=true"
+        $con.ConnectionString = "Server=localhost;database=RacingRestore;Integrated Security=true"
         $con.Open()
 
 $SCHEDULEURL = "http://xml.tab.co.nz/schedule"
@@ -279,54 +279,68 @@ function DataSecondPass
 
 function GeneratePredictions()
 {
-    $exe = "C:\Program Files\R\R-3.1.1\bin\Rscript.exe"
-    $script = """C:\Projects\Racing\Code\Doggies\R\Testing\PredictFutureResults.r"""
-    Start-Process $exe -ArgumentList $script
+    $month = (Get-Date).Month
+    $tracksQuery = "SELECT DISTINCT TRACKID FROM RACES WHERE MEETID IN (SELECT MEETID FROM MEETS WHERE DATE = convert(date, getdate()))"
+    $tracks = (ReadSQL($tracksQuery)).TRACKID
+    foreach($track in $tracks)
+    {
+        $exe = "C:\Program Files\R\R-3.1.1\bin\Rscript.exe"
+        $script = """C:\Projects\Racing\Code\Doggies\R\Testing\PredictFutureResults.r"""
+        $args = @()
+        $args += $script
+        $args += $track
+        $args += $month
+
+        Start-Process $exe -ArgumentList $args
+    }
 }
 
 function ProcessAllRaces()
 {
-    $modelQuery = "SELECT CONFIGVALUE FROM CONFIG WHERE CONFIGITEM = 'PREDICTIONMODEL'"
-    $NN = (ReadSQL($modelQuery)).CONFIGVALUE
+    $modelQuery = "SELECT DISTINCT NNID FROM FUTUREPREDICTIONS"
+    $models = (ReadSQL($modelQuery)).NNID
 
-    $RaceQuery = "SELECT a.RACEID FROM RACES a INNER JOIN MEETS b ON a.MEETID = b.MEETID WHERE b.DATE = convert(date, getdate())"
-    $RaceDetails = ReadSQL($RaceQuery)
-
-    $count = 0
-    foreach($race in $RaceDetails)
+    foreach($model in $models)
     {
-        $raceID = $race.RACEID
-        $predictResults = New-Object System.Collections.Generic.List[object]
-        $count++
+        $RaceQuery = "SELECT DISTINCT RACEID FROM FUTUREPREDICTIONS WHERE NNID = '$model'"
+        $RaceDetails = ReadSQL($RaceQuery)
 
-        $predictQuery = "SELECT TOP 4 [DOGID] FROM FUTUREPREDICTIONS WHERE RACEID = $RaceID AND NNID = '$NN' ORDER BY PREDICTEDRESULTS"        
-        $sqlResults = ReadSQL($predictQuery)
-        $predictResults = $sqlResults
+        $count = 0
+        foreach($race in $RaceDetails)
+        {
+            $raceID = $race.RACEID
+            $predictResults = New-Object System.Collections.Generic.List[object]
+            $count++
+
+            $predictQuery = "SELECT TOP 4 [DOGID] FROM FUTUREPREDICTIONS WHERE RACEID = $RaceID AND NNID = '$model' ORDER BY PREDICTEDRESULTS"        
+            $sqlResults = ReadSQL($predictQuery)
+            $predictResults = $sqlResults
 
 
-        if($predictResults -eq $NULL) 
-        { 
-            Write-Host "Skipped"
-            continue }
+            if($predictResults -eq $NULL) 
+            { 
+                Write-Host "Skipped"
+                continue }
 
-        $1Dog = $predictResults[0].DOGID
-        $2Dog = $predictResults[1].DOGID
-        $3Dog = $predictResults[2].DOGID
-        $4Dog = $predictResults[3].DOGID
+            $1Dog = $predictResults[0].DOGID
+            $2Dog = $predictResults[1].DOGID
+            $3Dog = $predictResults[2].DOGID
+            $4Dog = $predictResults[3].DOGID
 
-        $percent = $percent = [math]::round((($count/$raceDetails.Count) * 100), 0)
-        Write-Progress -Activity:"Processing all races.. ($percent%)" -PercentComplete:$percent
+            $percent = $percent = [math]::round((($count/$raceDetails.Count) * 100), 0)
+            Write-Progress -Activity:"Processing all races.. ($percent%)" -PercentComplete:$percent
 
-        $clearQuery = "UPDATE FUTURERESULTS SET PREDICTION = NULL WHERE RACEID = $raceID"
-        $dog1Query = "UPDATE FUTURERESULTS SET PREDICTION = 1 WHERE RACEID = $raceID AND DOGID = $1Dog"
-        $dog2Query = "UPDATE FUTURERESULTS SET PREDICTION = 2 WHERE RACEID = $raceID AND DOGID = $2Dog"
-        $dog3Query = "UPDATE FUTURERESULTS SET PREDICTION = 3 WHERE RACEID = $raceID AND DOGID = $3Dog"
-        $dog4Query = "UPDATE FUTURERESULTS SET PREDICTION = 4 WHERE RACEID = $raceID AND DOGID = $4Dog"
-        RunSQL($clearQuery)
-        RunSQL($dog1Query)
-        RunSQL($dog2Query)
-        RunSQL($dog3Query)
-        RunSQL($dog4Query)
+            $clearQuery = "UPDATE FUTURERESULTS SET PREDICTION = NULL WHERE RACEID = $raceID"
+            $dog1Query = "UPDATE FUTURERESULTS SET PREDICTION = 1 WHERE RACEID = $raceID AND DOGID = $1Dog"
+            $dog2Query = "UPDATE FUTURERESULTS SET PREDICTION = 2 WHERE RACEID = $raceID AND DOGID = $2Dog"
+            $dog3Query = "UPDATE FUTURERESULTS SET PREDICTION = 3 WHERE RACEID = $raceID AND DOGID = $3Dog"
+            $dog4Query = "UPDATE FUTURERESULTS SET PREDICTION = 4 WHERE RACEID = $raceID AND DOGID = $4Dog"
+            RunSQL($clearQuery)
+            RunSQL($dog1Query)
+            RunSQL($dog2Query)
+            RunSQL($dog3Query)
+            RunSQL($dog4Query)
+        }
     }
 
 }

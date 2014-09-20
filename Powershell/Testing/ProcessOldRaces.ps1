@@ -4,7 +4,7 @@ $RESULTSURL = "http://xml.tab.co.nz/results/"
 [reflection.assembly]::LoadWithPartialName("'Microsoft.VisualBasic")
 
         $con = New-Object System.Data.SqlClient.SqlConnection
-        $con.ConnectionString = "Server=localhost\sqlexpress;database=RacingRestore;Integrated Security=true"
+        $con.ConnectionString = "Server=localhost;database=RacingRestore;Integrated Security=true"
         $con.Open()
 
 function RunSQL($query)
