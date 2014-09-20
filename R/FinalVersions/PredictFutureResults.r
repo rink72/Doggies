@@ -2,11 +2,12 @@ library(RODBC)
 library(nnet)
 library(neuralnet)
 
+	args = commandArgs(trailingOnly = TRUE)
+	trackID = args[1]
+	month = args[2]
 
-PredictFutureResults <- function()
-{
 	racingConn = odbcConnect("racing")
-	modelQuery = "SELECT CONFIGVALUE FROM CONFIG WHERE CONFIGITEM = 'PREDICTIONMODEL'"
+	modelQuery = paste("SELECT TOP 1 ID FROM NETWORKDETAILS a INNER JOIN NETWORKRESULTS b on a.ID = b.NNID WHERE a.TRACK =", trackID, "AND a.MONTH =", month, "ORDER BY b.PLACEPRCNT DESC", sep = " ")
 	model = sqlQuery(racingConn, modelQuery)
 	
 	nnID = data.frame(model[, 1])
@@ -19,7 +20,7 @@ PredictFutureResults <- function()
 	query = data.frame(network[, 3])
 	query = data.frame(lapply(query, as.character), stringsAsFactors=FALSE)
 	query = query[,1]
-	query = paste("SELECT RACEID, DOGID,", query, "FROM FUTUREDATA ORDER by newID()", sep = " ")
+	query = paste("SELECT RACEID, DOGID,", query, "FROM FUTUREDATA WHERE RACEID IN (SELECT RACEID FROM RACES WHERE TRACKID =", trackID, "AND MEETID in (SELECT MEETID FROM MEETS WHERE DATE = convert(date, getdate()))) ORDER by newID()", sep = " ")
 	queryData = sqlQuery(racingConn, query)
 
 	nnfilename = data.frame(network[, 2])
@@ -36,7 +37,3 @@ PredictFutureResults <- function()
 	
 	
 	close(racingConn)
-}
-
-
-PredictFutureResults()
