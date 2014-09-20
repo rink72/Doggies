@@ -193,7 +193,8 @@ BatchTrainOrder <-function()
 												netDetails[1,13] = m
 												
 												netDetails = as.data.frame(netDetails)
-
+												
+												net$data = NULL
 												save(net, file = fileName)
 												sqlSave(racingConn, netDetails, tablename = "NETWORKDETAILS", append=TRUE)
 												
