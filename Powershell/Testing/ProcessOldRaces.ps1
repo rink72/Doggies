@@ -104,7 +104,7 @@ function DownloadOldMeetsXML
 
         $count++
         $percent = ($count/($TIMEPERIOD+1))*100
-        Write-Progress -Activity:"Processing Meet Days... ($percent%)" -PercentComplete:$percent
+        Write-Progress -Activity:"Processing Days... ($percent%)" -PercentComplete:$percent
 
     }
 
