@@ -10,5 +10,8 @@ DROP TABLE racing.dbo.NETWORKRESULTS
 select * into racing.dbo.NETWORKRESULTS FROM racingrestore.dbo.NETWORKRESULTS
 DROP TABLE racing.dbo.NETWORKDETAILS
 select * into racing.dbo.NETWORKDETAILS FROM racingrestore.dbo.NETWORKDETAILS
+DROP TABLE racing.dbo.RESULTS
+select * into racing.dbo.RESULTS FROM racingrestore.dbo.RESULTS
+update racing.dbo.NETWORKDETAILS SET nnfilename = REPLACE(nnfilename, 'Testing', 'FinalVersions')
 
 
