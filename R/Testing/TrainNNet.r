@@ -2,19 +2,32 @@ library(RODBC)
 library(nnet)
 library(neuralnet)
 
-scaleTANH <- function(x) { 
-    x <- sweep(x, 2, apply(x, 2, min)) 
-    x <- sweep(x, 2, apply(x, 2, max), "/") 
-    2*x - 1
+scaleTANH <- function(nnid, x) { 
+	
+	cNames = colnames(x)
+	racingConn = odbcConnect("racingTest")
+	
+	for(c in 1:ncol(x))
+	{
+		cMax = max(x[,c])
+		cMax = as.numeric(cMax)
+		cMin = min(x[,c])
+		cMin = as.numeric(cMin)
+		
+		x[,c] = (x[,c] - cMin) / (cMax - cMin)
+		x[,c] = (2* x[,c]) - 1
+	
+		fMaxQuery = paste("EXEC SetFeature @NNID = '", nnid, "', @FEATURE = '", cNames[c], "', @DESCRIPTION = 'MAX', @VALUE = ", cMax, sep = "")
+		fMinQuery = paste("EXEC SetFeature @NNID = '", nnid, "', @FEATURE = '", cNames[c], "', @DESCRIPTION = 'MIN', @VALUE = ", cMin, sep = "")
+		sqlQuery(racingConn, fMaxQuery)
+		sqlQuery(racingConn, fMinQuery)
+	}
+	
+	return(x)
 }
 
-scaleLOGICAL <- function(x) { 
-    x <- sweep(x, 2, apply(x, 2, min)) 
-    x <- sweep(x, 2, apply(x, 2, max), "/") 
-}
 
-
-normalize <- function(x) { 
+normalize <- function(nnid, x) { 
     
 	cNames = colnames(x)
 	racingConn = odbcConnect("racingTest")
@@ -29,31 +42,58 @@ normalize <- function(x) {
 		cStdDev = as.numeric(cStdDev)
 		
 		x[,c] = (x[,c] - cMean) / cStdDev
+		
+		fMeanQuery = paste("EXEC SetFeature @NNID = '", nnid, "', @FEATURE = '", cNames[c], "', @DESCRIPTION = 'MEAN', @VALUE = ", cMean, sep = "")
+		fStdDevQuery = paste("EXEC SetFeature @NNID = '", nnid, "', @FEATURE = '", cNames[c], "', @DESCRIPTION = 'STDDEV', @VALUE = ", cStdDev, sep = "")
+		sqlQuery(racingConn, fMeanQuery)
+		sqlQuery(racingConn, fStdDevQuery)
+	}
+	
+	return(x)
+}
+
+scaleTANH2 <- function(nnid, x) { 
+	
+	cNames = colnames(x)
+	racingConn = odbcConnect("racingTest")
+	
+	for(c in 1:ncol(x))
+	{
+		qMax = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'MAX' AND FEATURE = '", cNames[c],"'", sep = "")
+		cMax = sqlQuery(racingConn, qMax)
+		cMax = as.numeric(cMax)
+		qMin = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'MIN' AND FEATURE = '", cNames[c],"'", sep = "")
+		cMin = sqlQuery(racingConn, qMin)
+		cMin = as.numeric(cMin)
+		
+		x[,c] = (x[,c] - cMin) / (cMax - cMin)
+		x[,c] = (2* x[,c]) - 1
 	}
 	
 	return(x)
 }
 
 
-normalize2 <- function(x) { 
+normalize2 <- function(nnid, x) { 
     
 	cNames = colnames(x)
 	racingConn = odbcConnect("racingTest")
 	
 	for(c in 1:ncol(x))
 	{
-		queryMax = paste("SELECT MAX(", cNames[c], ") FROM TRAININGDATA", sep = "")
-		cMax = sqlQuery(racingConn, queryMax)
-		cMax = as.numeric(cMax)
-		queryMin = paste("SELECT MIN(", cNames[c], ") FROM TRAININGDATA", sep = "")
-		cMin = sqlQuery(racingConn, queryMin)
-		cMin = as.numeric(cMin)
+		qMean = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'MEAN' AND FEATURE = '", cNames[c],"'", sep = "")
+		cMean = sqlQuery(racingConn, qMean)
+		cMean = as.numeric(cMean)
+		qSD = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'STDDEV' AND FEATURE = '", cNames[c],"'", sep = "")
+		cStdDev = sqlQuery(racingConn, qSD)
+		cStdDev = as.numeric(cStdDev)
 		
-		x[,c] = (x[,c] - cMin) / (cMax - cMin)
+		x[,c] = (x[,c] - cMean) / cStdDev
 	}
 	
 	return(x)
 }
+
 
 cleanData <- function(x)
 {
@@ -84,8 +124,8 @@ BatchTrainOrder <-function()
 	
 	neurons = dim(1)
 	neurons[1] = 2
-	neurons[2] = 4
-	neurons[3] = 8
+	#neurons[2] = 4
+	#neurons[3] = 8
 	#neurons$four = 10
 	#neurons$five = 15
 	
@@ -102,13 +142,13 @@ BatchTrainOrder <-function()
 	#actFunc[2] = "logistic"
 	
 	scales = dim(1)
-	scales[1] = "NO"
-	scales[2] = "TANH"
+	#scales[1] = "NO"
+	scales[1] = "TANH"
 	
 	normalise = dim(1)
-	normalise[1] = "NO"
-	normalise[2] = "MAX_MIN"
-	normalise[3] = "MEAN_STDDEV"
+	#normalise[1] = "NO"
+	#normalise[2] = "MAX_MIN"
+	normalise[1] = "MEAN_STDDEV"
 	
 	racingConn = odbcConnect("racingTest")
 	trackMonthQuery = "select TRACKID, month(starttime) as MONTH from races group by trackid, month(starttime) having count(*) > 100 ORDER BY trackid, month(starttime)"
@@ -157,9 +197,11 @@ BatchTrainOrder <-function()
 											queryData = queryData[sample(nrow(queryData)),]
 											queryData$RESULT[queryData$RESULT > 4] = 10
 											
-											if(normalise[norms] == "MEAN_STDDEV") { queryData = normalize(queryData) }
+											NNID = paste("Q", query, "E", errors[error], nrow(queryData), iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], t, m, sep="_")
+											
+											if(normalise[norms] == "MEAN_STDDEV") { queryData = normalize(NNID, queryData) }
 											else if (normalise[norms] == "MAX_MIN") { queryData = normalize2(queryData) }
-											if(scales[sc] == "TANH") { queryData = scaleTANH(queryData) }
+											if(scales[sc] == "TANH") { queryData = scaleTANH(NNID, queryData) }
 											
 											queryData = data.matrix(queryData)
 											
@@ -180,9 +222,8 @@ BatchTrainOrder <-function()
 												netDetails[1,2] = errors[error]
 												netDetails[1,3] = nrow(queryData)
 												netDetails[1,4] = neurons[n]
-												fileName = paste(fileRoot, "Q", query, "E", errors[error], 5000, iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], t, m, ".r", sep="_")
+												fileName = paste(fileRoot, "Q", query, "E", errors[error], nrow(queryData), iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], t, m, ".r", sep="_")
 												netDetails[1,5] = fileName
-												NNID = paste("Q", query, "E", errors[error], 5000, iter, "N", neurons[n], algs[alg], actFunc[act], normalise[norms], scales[sc], t, m, sep="_")
 												netDetails[1,6] = NNID
 												netDetails[1,7] = "ORDER"
 												netDetails[1,8] = actFunc[act]
@@ -231,7 +272,7 @@ BatchPredict <- function()
 {
 	
 	racingConn = odbcConnect("racingTest")
-	networkQuery = "SELECT id, nnfilename, query, Normalised, Scaled, Track, Month from NETWORKDETAILS WHERE ID NOT IN (SELECT DISTINCT NNID FROM NETWORKRESULTS)"
+	networkQuery = "SELECT id, nnfilename, query, Normalised, Scaled, Track, Month from NETWORKDETAILS WHERE ID NOT IN (SELECT DISTINCT NNID FROM PREDICTEDRESULTS) AND TRACK IS NOT NULL"
 	networks = sqlQuery(racingConn, networkQuery)
 	print(networks)
 	
@@ -260,10 +301,9 @@ BatchPredict <- function()
 		dataSet = sqlQuery(racingConn, query)
 		dataSet = dataSet[sample(nrow(dataSet)),]
 		inputData = dataSet[,3:ncol(dataSet)]
-		if(networks[network, 4] == "MEAN_STDDEV") { inputData = normalize(inputData) }
-		else if(networks[network, 4] == "MAX_MIN") { inputData = normalize2(inputData) }
+		if(networks[network, 4] == "MEAN_STDDEV") { inputData = normalize2(nnid, inputData) }
 		
-		if(networks[network, 5] == "TANH") { inputData = scaleTANH(inputData) }
+		if(networks[network, 5] == "TANH") { inputData = scaleTANH2(nnid, inputData) }
 		
 		results = compute(net, inputData)
 		results = results$net.result
@@ -271,7 +311,6 @@ BatchPredict <- function()
 		
 		output = cbind(nnid, dataSet[,1:2], PredictedResults)
 		sqlSave(racingConn, output, tablename = "PREDICTEDRESULTS", append = TRUE)
-		#print(paste("Percent Complete: ", ((count/nrow(networks)) *100), sep = ""))
 	}
 	
 	close(pb)

@@ -2,6 +2,47 @@ library(RODBC)
 library(nnet)
 library(neuralnet)
 
+scaleTANH <- function(nnid, x) { 
+	
+	cNames = colnames(x)
+	racingConn = odbcConnect("racingTest")
+	
+	for(c in 1:ncol(x))
+	{
+		qMax = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'MAX' AND FEATURE = '", cNames[c],"'", sep = "")
+		cMax = sqlQuery(racingConn, qMax)
+		cMax = as.numeric(cMax)
+		qMin = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'MIN' AND FEATURE = '", cNames[c],"'", sep = "")
+		cMin = sqlQuery(racingConn, qMin)
+		cMin = as.numeric(cMin)
+		
+		x[,c] = (x[,c] - cMin) / (cMax - cMin)
+		x[,c] = (2* x[,c]) - 1
+	}
+	
+	return(x)
+}
+
+
+normalize <- function(nnid, x) { 
+    
+	cNames = colnames(x)
+	racingConn = odbcConnect("racingTest")
+	
+	for(c in 1:ncol(x))
+	{
+		qMean = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'MEAN' AND FEATURE = '", cNames[c],"'", sep = "")
+		cMean = sqlQuery(racingConn, qMean)
+		cMean = as.numeric(cMean)
+		qSD = paste("SELECT VALUE FROM FEATURES_DETAIL WHERE NNID = '", nnid, "' AND DESCRIPTION = 'STDDEV' AND FEATURE = '", cNames[c],"'", sep = "")
+		cStdDev = sqlQuery(racingConn, qSD)
+		cStdDev = as.numeric(cStdDev)
+		
+		x[,c] = (x[,c] - cMean) / cStdDev
+	}
+	
+	return(x)
+}
 	args = commandArgs(trailingOnly = TRUE)
 	trackID = args[1]
 	month = args[2]
@@ -29,6 +70,9 @@ library(neuralnet)
 	
 	load(nnfilename)
 	inputData = queryData[,3:(ncol(queryData))]
+	inputData = normalize(nnID, inputData)
+	inputData = scaleTANH(nnID, inputData)
+	
 	results = compute(net, inputData)
 	results = results$net.result
 	PredictedResults = results

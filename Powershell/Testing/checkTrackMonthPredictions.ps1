@@ -138,8 +138,9 @@ function calculatePayout($picks)
 
 $networkQuery = "SELECT DISTINCT ID FROM NETWORKDETAILS WHERE ID NOT IN ( SELECT NNID FROM NETWORKRESULTS )" #AND ID IN (SELECT DISTINCT NNID FROM PREDICTEDRESULTS)"
 $networkDetails = ReadSQL($networkQuery)
+$netCount = $networkDetails.count
 
-
+$count = 0
 foreach($network in $networkDetails)
 {
     $netID = $network.ID
@@ -198,8 +199,12 @@ foreach($network in $networkDetails)
     $QPay = $netPayout[2].'$1'
     $TPay = $netPayout[3].'$1'
 
-    $insertQuery = "INSERT INTO NETWORKRESULTS VALUES ('$netid', $FPrcnt, $FPay, $PPrcnt, $PPay,$QPrcnt, $QPay, $TPrcnt, $TPay, $numbets, '')"
+    $insertQuery = "INSERT INTO NETWORKRESULTS ([NNID],[FIRSTPRCNT],[FIRSTPAY],[PLACEPRCNT],[PLACEPAY],[QUINPRCNT],[QUINPAY],[TRIFECTAPRCNT],[TRIFECTAPAY],[NUMBETS]) VALUES ('$netid', $FPrcnt, $FPay, $PPrcnt, $PPay,$QPrcnt, $QPay, $TPrcnt, $TPay, $numbets)"
     RunSQL($insertQuery)
     $netPayout | ft
+
+    $count++
+    $percent = ($count/($netCount+1))*100
+    Write-Progress -Activity:"Processing Days... ($percent%)" -PercentComplete:$percent
 }
 
