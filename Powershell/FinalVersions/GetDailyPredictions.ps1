@@ -285,7 +285,7 @@ function GeneratePredictions()
     foreach($track in $tracks)
     {
         $exe = "C:\Program Files\R\R-3.1.1\bin\Rscript.exe"
-        $script = """C:\Projects\Racing\Code\Doggies\R\Testing\PredictFutureResults.r"""
+        $script = """C:\Projects\Racing\Code\Doggies\R\FinalVersions\PredictFutureResults.r"""
         $args = @()
         $args += $script
         $args += $track
@@ -371,7 +371,7 @@ CreatePredictionData
 Write-Host "Generating predictions..."
 GeneratePredictions
 
-Sleep -Seconds 5
+Sleep -Seconds 20
 
 Write-Host "Processing All Races..."
 ProcessAllRaces

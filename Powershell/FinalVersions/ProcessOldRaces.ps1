@@ -47,7 +47,7 @@ function GetDogID($DogName)
 
 function DownloadOldMeetsXML
 {
-    $TIMEPERIOD = 4
+    $TIMEPERIOD = 2
     $STARTDATE = (Get-Date).AddDays(-1)
     $FINISHDATE = $STARTDATE.AddDays(-$TIMEPERIOD)
 

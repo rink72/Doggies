@@ -32,7 +32,7 @@ foreach($t in $tracks)
 {
     for($m=1;$m -le 12;$m++)
     {
-        $modelQuery = "SELECT TOP 1 a.ID, b.PLACEPRCNT, a.NNFILENAME FROM NETWORKDETAILS a INNER JOIN NETWORKRESULTS b on a.ID = b.NNID WHERE TRACK = $t AND MONTH = $m ORDER BY b.PLACEPRCNT DESC"
+        $modelQuery = "SELECT TOP 1 a.ID, b.PLACEPRCNT, a.NNFILENAME FROM NETWORKDETAILS a INNER JOIN NETWORKRESULTS b on a.ID = b.NNID WHERE TRACK = $t AND MONTH = $m  AND b.PLACEPRCNT > 60 ORDER BY b.PLACEPRCNT DESC"
         $mEntry = ReadSQL($modelQuery)
         $models.add($mEntry)
 
