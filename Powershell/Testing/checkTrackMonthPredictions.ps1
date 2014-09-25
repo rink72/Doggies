@@ -165,11 +165,7 @@ foreach($network in $networkDetails)
         $predictQuery = "SELECT TOP 3 [DOGID], [PREDICTEDRESULTS] FROM PREDICTEDRESULTS WHERE RACEID = $RaceID AND NNID = '$netID' ORDER BY PREDICTEDRESULTS"        
         $predictResults = ReadSQL($predictQuery)
 
-        if($predictResults -eq $NULL) 
-        { 
-            $count++
-            continue 
-        }
+        if($predictResults -eq $NULL) { continue }
         
         $actualResultsQuery = "SELECT TOP 3 [DOGID] FROM RESULTS WHERE RACEID = $raceID ORDER BY RESULT"
         $actualResults = ReadSQL($actualResultsQuery)

@@ -123,11 +123,11 @@ BatchTrainOrder <-function()
 	errors[2] = 0.01
 	
 	neurons = dim(1)
-	neurons[1] = 2
-	#neurons[2] = 4
-	#neurons[3] = 8
+	#neurons[1] = 2
+	neurons[1] = 4
+	neurons[2] = 8
 	#neurons$four = 10
-	#neurons$five = 15
+	neurons[3] = 15
 	
 	algs = dim(1)
 	algs[1] = "backprop"
@@ -160,7 +160,7 @@ BatchTrainOrder <-function()
 	iteration = sqlQuery(racingConn, iterationQuery)
 	iteration = iteration[,1] + 1
 	
-	for (iter in iteration:(iteration + 10))
+	for (iter in iteration:(iteration))
 	{
 		updateIteration = paste("UPDATE CONFIG SET CONFIGVALUE =", iter, "WHERE CONFIGITEM = 'TRAININGITERATION'", sep = " ")
 		update = sqlQuery(racingConn, updateIteration)
